@@ -45,7 +45,7 @@ use mio_extras::channel::{channel, Receiver, SendError, Sender};
 use self::{
     dnd::{Dnd, DndState},
     event_processor::EventProcessor,
-    ime::{Ime, ImeCreationError, ImeReceiver, ImeSender},
+    ime::{Ime, ImeReceiver, ImeSender},
     util::modifiers::ModifierKeymap,
 };
 use crate::{
@@ -130,10 +130,13 @@ impl<T: 'static> EventLoop<T> {
         }
         let ime = RefCell::new({
             let result = Ime::new(Arc::clone(&xconn));
-            if let Err(ImeCreationError::OpenFailure(ref state)) = result {
-                panic!(format!("Failed to open input method: {:#?}", state));
+
+            match result {
+                Ok(ime) => ime,
+                Err(err) => {
+                    panic!("Failed to open input method: {}", err);
+                }
             }
-            result.expect("Failed to set input method destruction callback")
         });
 
         let randr_event_offset = xconn
@@ -410,6 +413,11 @@ impl<T: 'static> EventLoop<T> {
 
         while unsafe { self.event_processor.poll_one_event(xev.as_mut_ptr()) } {
             let mut xev = unsafe { xev.assume_init() };
+
+            if wt.ime.borrow_mut().filter_event(&xev).unwrap_or(false) {
+                continue;
+            }
+
             self.event_processor.process_event(&mut xev, |event| {
                 sticky_exit_callback(
                     event,
@@ -426,6 +434,17 @@ impl<T: 'static> EventLoop<T> {
                         }
                     },
                 );
+            });
+        }
+
+        loop {
+            let xev = match wt.ime.borrow_mut().pop_forwarded() {
+                Some(xev) => xev,
+                _ => break,
+            };
+            let mut xev = ffi::XEvent { key: xev };
+            self.event_processor.process_event(&mut xev, |event| {
+                sticky_exit_callback(event, target, control_flow, callback)
             });
         }
     }

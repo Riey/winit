@@ -117,20 +117,6 @@ impl<T: 'static> EventProcessor<T> {
         F: FnMut(Event<'_, T>),
     {
         let wt = get_xtarget(&self.target);
-        // XFilterEvent tells us when an event has been discarded by the input method.
-        // Specifically, this involves all of the KeyPress events in compose/pre-edit sequences,
-        // along with an extra copy of the KeyRelease events. This also prevents backspace and
-        // arrow keys from being detected twice.
-        if ffi::True
-            == unsafe {
-                (wt.xconn.xlib.XFilterEvent)(xev, {
-                    let xev: &ffi::XAnyEvent = xev.as_ref();
-                    xev.window
-                })
-            }
-        {
-            return;
-        }
 
         // We can't call a `&mut self` method because of the above borrow,
         // so we use this macro for repeated modifier state updates.
@@ -596,8 +582,8 @@ impl<T: 'static> EventProcessor<T> {
                 }
 
                 if state == Pressed {
-                    let written = if let Some(ic) = wt.ime.borrow().get_context(window) {
-                        wt.xconn.lookup_utf8(ic, xkev)
+                    let written = if let Some(ic) = wt.ime.borrow_mut().get_context(window) {
+                        std::mem::take(&mut ic.written)
                     } else {
                         return;
                     };

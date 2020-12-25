@@ -18,9 +18,8 @@ use crate::{
     error::{ExternalError, NotSupportedError, OsError as RootOsError},
     monitor::{MonitorHandle as RootMonitorHandle, VideoMode as RootVideoMode},
     platform_impl::{
-        x11::{ime::ImeContextCreationError, MonitorHandle as X11MonitorHandle},
-        MonitorHandle as PlatformMonitorHandle, OsError, PlatformSpecificWindowBuilderAttributes,
-        VideoMode as PlatformVideoMode,
+        x11::MonitorHandle as X11MonitorHandle, MonitorHandle as PlatformMonitorHandle, OsError,
+        PlatformSpecificWindowBuilderAttributes, VideoMode as PlatformVideoMode,
     },
     window::{CursorIcon, Fullscreen, Icon, UserAttentionType, WindowAttributes},
 };
@@ -422,10 +421,7 @@ impl UnownedWindow {
                 let result = event_loop.ime.borrow_mut().create_context(window.xwindow);
                 if let Err(err) = result {
                     let e = match err {
-                        ImeContextCreationError::XError(err) => OsError::XError(err),
-                        ImeContextCreationError::Null => {
-                            OsError::XMisc("IME Context creation failed")
-                        }
+                        _ => OsError::XMisc("IME Context creation failed"),
                     };
                     return Err(os_error!(e));
                 }

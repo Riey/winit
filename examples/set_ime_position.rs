@@ -28,6 +28,12 @@ fn main() {
                 cursor_position = position;
             }
             Event::WindowEvent {
+                event: WindowEvent::ReceivedCharacter(ch),
+                ..
+            } => {
+                println!("get ch: {}", ch);
+            }
+            Event::WindowEvent {
                 event:
                     WindowEvent::MouseInput {
                         state: ElementState::Released,

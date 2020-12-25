@@ -39,6 +39,14 @@ pub fn maybe_change<T: PartialEq>(field: &mut Option<T>, value: T) -> bool {
     }
 }
 
+impl xim::xlib::XlibRef for XConnection {
+    fn xlib(&self) -> &x11_dl::xlib::Xlib {
+        &self.xlib
+    }
+}
+
+pub type XimClient = xim::xlib::XlibClient<std::sync::Arc<XConnection>>;
+
 #[must_use = "This request was made asynchronously, and is still in the output buffer. You must explicitly choose to either `.flush()` (empty the output buffer, sending the request now) or `.queue()` (wait to send the request, allowing you to continue to add more requests without additional round-trips). For more information, see the documentation for `util::flush_requests`."]
 pub struct Flusher<'a> {
     xconn: &'a XConnection,
